@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Grid Rider 2.0 - Studio Edition with AI Coach</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00ffff;
+            --secondary-color: #ff00ff;
+            --accent-color: #ff006e;
+            --success-color: #00ffcc;
+            --panel-bg: rgba(8, 16, 30, 0.62);
+            --glow-intensity: 0.8;
+            --seq-bg: rgba(5, 10, 20, 0.95);
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at 20% 10%, #112a45 0%, #090918 35%, #04040d 100%);
+            font-family: 'Rajdhani', sans-serif;
+            color: #fff;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+            filter: brightness(1.05) contrast(1.1);
+        }
+        
+        /* Verbeterde UI Laag */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 0 0 20px var(--primary-color), 0 0 40px rgba(0, 255, 255, 0.5);
+            transition: all 0.5s;
+            gap: 18px;
+            backdrop-filter: blur(10px);
+            background: rgba(8, 16, 30, 0.3);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+        
+        .ui-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 8px 15px;
+        }
+        
+        .stat {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary-color);
+            transition: all 0.3s;
+            text-shadow: 0 0 15px var(--primary-color), 0 0 30px rgba(0, 255, 255, 0.6);
+            letter-spacing: 1px;
+        }
+        
+        .stat:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+        
+        .label {
+            font-size: 12px;
+            color: #a8d8ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: 'Orbitron', sans-serif;
+            opacity: 0.8;
+        }
+        
+        #controls {
+            text-align: center;
+            color: #a8d8ff;
+            font-size: 13px;
+            letter-spacing: 1px;
+            background: rgba(8, 16, 30, 0.5);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin: 0 auto;
+            width: fit-content;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+        
+        #controls:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+        }
+
+        /* Verbeterd Startscherm */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(18, 44, 72, 0.95) 0%, rgba(5, 5, 16, 0.98) 50%, rgba(2, 2, 8, 0.99) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: opacity 0.5s ease;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        
+        #start-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        #start-screen h1 {
+            color: var(--primary-color);
+            font-size: 54px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px var(--primary-color), 0 0 60px rgba(0, 255, 255, 0.6), 0 0 90px rgba(255, 0, 150, 0.3);
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 3px;
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        #start-screen p {
+            font-size: 18px;
+            color: #a8d8ff;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        /* AI Paneel */
+        .ai-panel {
+            background: rgba(8, 16, 30, 0.6);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid var(--primary-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            transition: all 0.3s;
+        }
+        
+        .ai-panel:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 60px rgba(255, 0, 150, 0.3), inset 0 0 30px rgba(0, 255, 255, 0.1);
+        }
+        
+        .ai-panel input {
+            padding: 15px 20px;
+            font-size: 16px;
+            width: min(350px, 80vw);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+        }
+        
+        .ai-panel input:focus {
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+            transform: scale(1.02);
+        }
+        
+        .ai-panel button {
+            padding: 15px 35px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+        
+        .ai-panel button:hover {
+            transform: scale(1.08) translateY(-2px);
+            filter: brightness(1.2);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6), 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .ai-panel button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+        
+        #loading-text {
+            display: none;
+            color: var(--primary-color);
+            font-style: italic;
+            margin-top: 10px;
+            animation: pulse 1s infinite alternate;
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+        
+        #ai-status {
+            color: var(--success-color);
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: -6px;
+            text-shadow: 0 0 15px var(--success-color);
+            animation: pulse 2s infinite alternate;
+        }
+
+        #coach-msg {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            text-align: center;
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 26px;
+            text-shadow: 0 0 15px #ff00ff, 0 0 30px rgba(255, 0, 150, 0.6);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            animation: floatUp 3s ease-out forwards;
+        }
+        
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            20% { transform: translateY(-10px) scale(1.1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1); }
+        }
+
+        #transmission-box {
+            display: none;
+            position: absolute;
+            right: 20px;
+            top: 120px;
+            width: 300px;
+            padding: 20px;
+            background: rgba(255, 0, 0, 0.15);
+            border: 2px solid #f00;
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            text-shadow: 0 0 10px #f00;
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 15;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3), inset 0 0 15px rgba(255, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .pulse-text {
+            animation: pulse 1.5s infinite alternate;
+            cursor: pointer;
+            color: #fff;
+            margin-top: 30px;
+            padding: 15px 25px;
+            pointer-events: auto;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(0, 255, 255, 0.05);
+            transition: all 0.3s;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .pulse-text:hover {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 20px currentColor; }
+        }
+
+        /* MISSIERAPPORT (EXTRACTIE) MODAL */
+        #mission-report {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            max-width: 600px;
+            background: rgba(10, 20, 40, 0.95);
+            border: 2px solid var(--primary-color);
+            border-radius: 15px;
+            z-index: 60;
+            padding: 30px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
+            pointer-events: auto;
+            color: #fff;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        #mission-report h2 {
+            color: var(--primary-color);
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px var(--primary-color);
+            letter-spacing: 2px;
+            margin-top: 0;
+        }
+        
+        #report-stats {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 0, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        #report-text {
+            font-size: 18px;
+            line-height: 1.5;
+            margin: 20px 0;
+            font-style: italic;
+            min-height: 80px;
+        }
+
+        .seq-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid var(--primary-color);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .seq-btn:hover { background: rgba(0, 255, 255, 0.3); }
+        .seq-btn.active { background: var(--primary-color); color: #000; font-weight: bold; }
+
+        @media (max-width: 860px) {
+            #ui-layer { padding: 12px; }
+            .top-ui { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .stat { font-size: 22px; }
+            #combo-val { font-size: 28px !important; }
+            #controls { width: calc(100vw - 24px); font-size: 13px; }
+            #start-screen h1 { font-size: 36px; }
+            #start-screen p { font-size: 16px; max-width: 92vw; }
+            #transmission-box { width: min(280px, calc(100vw - 24px)); right: 12px; top: 100px; }
+        }
+    </style>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="top-ui">
+            <div class="ui-group">
+                <span class="label">Score</span>
+                <span class="stat" id="score-val">0</span>
+            </div>
+            <div class="ui-group" style="align-items: center;">
+                <span class="label">Combo</span>
+                <span class="stat" id="combo-val" style="color: var(--secondary-color); font-size: 36px;">0</span>
+                <span class="label" id="theme-display" style="color: #fff; margin-top: 5px; display: none;">THEME: NEON DEFAULT</span>
+            </div>
+            <div class="ui-group" style="align-items: flex-end;">
+                <span class="label">Lives</span>
+                <span class="stat" id="lives-val" style="font-size: 22px; color: #fff;">3</span>
+                <span class="label">Speed</span>
+                <span class="stat" id="speed-val">1.0x</span>
+                <span class="label" style="margin-top:10px;">Music Style [M]</span>
+                <span class="stat" id="style-val" style="font-size: 18px; color: #fff;">Synthwave</span>
+            </div>
+        </div>
+        
+        <div id="coach-msg"></div>
+
+        <div id="transmission-box">
+            <div style="color:#f00; font-weight:bold; margin-bottom:5px; animation: pulse 1s infinite alternate;">[ALERT] ROGUE AI INVASION</div>
+            <div id="transmission-text"></div>
+        </div>
+
+        <div id="controls">
+            Move your sphere to catch the incoming notes.<br>
+            <strong>[E]</strong> Extract | <strong>[M]</strong> Next Style | <strong>[P]</strong> Pause | <strong>[Space]</strong> Mute
+        </div>
+    </div>
+
+    <!-- AI EXTRACTIE MISSIERAPPORT -->
+    <div id="mission-report">
+        <h2>MISSION REPORT</h2>
+        <div id="report-stats">Score: 0 | Max Combo: 0</div>
+        <div id="report-text">Generating debriefing...</div>
+        <button class="seq-btn active" id="btn-close-report" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">Process Data & Return to Menu</button>
+    </div>
+
+    <div id="start-screen">
+        <h1>RHYTHM GRID RIDER 2.0</h1>
+        <p id="start-subtitle">A procedural, AI-powered musical experience.<br>Don't miss a sphere, or the beat drops out!</p>
+        
+        <div class="ai-panel">
+            <span class="label" style="color: #fff; letter-spacing: 3px;">Generate Custom World</span>
+            <input type="text" id="theme-input" placeholder="e.g., Cyberpunk City, Deep Space...">
+            <button id="btn-generate">Create World & Play</button>
+            <div id="loading-text">Gemini is synthesizing your reality...</div>
+            <div id="ai-status" class="label">● AI Status: ONLINE & READY</div>
+        </div>
+
+        <h3 class="pulse-text" id="btn-start-default">OR CLICK HERE TO PLAY DEFAULT</h3>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // ==========================================
+        // 1. GAME STATUS & CONFIGURATIE
+        // ==========================================
+        let score = 0;
+        let combo = 0;
+        let consecutiveMisses = 0; // Tracking consecutive misses for speed reduction
+        let maxComboThisRun = 0; 
+        let lives = 3;
+        const maxLives = 3;
+        
+        const BALANCE = {
+            baseSpeed: 0.62,
+            speedGainPerCombo: 0.05, // Smoother speed progression
+            maxSpeedMultiplier: 2.4, // Reduced max speed so it remains playable
+            spawnStartMs: 1080,
+            spawnFloorMs: 175,
+            spawnSpeedFactorMs: 210,
+            spawnComboFactorMs: 6,
+            hitRadiusStart: 3.6,
+            hitRadiusMin: 2.4,
+            hitRadiusTightenPerCombo: 0.018,
+            zWindowBehindBase: 3.2,
+            zWindowBehindSpeedScale: 1.3,
+            zWindowAhead: 1.65,
+            missRecoveryMs: 420,
+            lifeRegenComboStep: 35
+        };
+        
+        let baseSpeed = BALANCE.baseSpeed;
+        let speedMultiplier = 1.0;
+        let gameActive = false;
+        let isPaused = false;
+        
+        let cameraShake = 0;
+        let currentCamX = 0;
+        let currentCamY = 5;
+        
+        let isInvasionActive = false;
+        let missRecoveryUntil = 0;
+        const MAX_BALLS = 44;
+        const MAX_PARTICLES = 360;
+        const MAX_TRAILS = 140;
+        
+        const apiKey = ""; // API sleutel via platform
+        let currentTheme = {
+            name: "Neon Default",
+            voiceName: "Kore",
+            startMsg: "System online. Welcome back, rider. Show them what you've got.",
+            combo10Msg: "Awesome combo! Stay focused!",
+            combo20Msg: "Unstoppable momentum! Keep it up!",
+            envType: "city",
+            fogColor: "#050510",
+            gridColor: "#00ffff",
+            lightColor: "#ff00ff"
+        };
+
+        const ui = {
+            score: document.getElementById("score-val"),
+            combo: document.getElementById("combo-val"),
+            speed: document.getElementById("speed-val"),
+            style: document.getElementById("style-val"),
+            theme: document.getElementById("theme-display"),
+            lives: document.getElementById("lives-val"),
+            coach: document.getElementById("coach-msg"),
+            transmissionBox: document.getElementById("transmission-box"),
+            transmissionText: document.getElementById("transmission-text"),
+            controls: document.getElementById("controls"),
+            startScreen: document.getElementById("start-screen"),
+            startSubtitle: document.getElementById("start-subtitle"),
+            themeInput: document.getElementById("theme-input"),
+            btnGenerate: document.getElementById("btn-generate"),
+            btnStartDefault: document.getElementById("btn-start-default"),
+            loadingText: document.getElementById("loading-text"),
+            aiStatus: document.getElementById("ai-status")
+        };
+
+        // ==========================================
+        // 2. HQ AUDIO ENGINE & SYNTHS (UITGEBREID)
+        // ==========================================
+        let audioCtx, masterGain, delayNode, delayFeedback, compressor, reverbConvolver;
+        let masterFilter, noiseBuffer;
+        let isMuted = false;
+        
+        // Expanded music styles
+        const musicStyles = [
+            { name: "Synthwave", wave: "sawtooth", filterMax: 3000, decay: 0.3, kickPattern: 1, scale: [130.81, 155.56, 174.61, 196.00, 233.08, 261.63, 311.13, 349.23] },
+            { name: "Dubstep", wave: "square", filterMax: 2500, decay: 0.5, kickPattern: 0.5, scale: [65.41, 73.42, 82.41, 98.00, 130.81, 146.83, 164.81, 196.00] },
+            { name: "Techno", wave: "square", filterMax: 5000, decay: 0.15, kickPattern: 2, scale: [130.81, 138.59, 155.56, 174.61, 196.00, 207.65, 233.08, 261.63] },
+            { name: "Future Bass", wave: "supersaw", filterMax: 6500, decay: 0.45, kickPattern: 2, scale: [174.61, 196.00, 220.00, 261.63, 293.66, 349.23, 392.00, 440.00] },
+            { name: "Trance", wave: "supersaw", filterMax: 6000, decay: 0.5, kickPattern: 2, scale: [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63] },
+            { name: "Trap", wave: "triangle", filterMax: 4000, decay: 0.7, kickPattern: 0.5, scale: [130.81, 138.59, 155.56, 164.81, 196.00, 207.65, 246.94, 261.63] },
+            { name: "Cyber-DNB", wave: "square", filterMax: 7000, decay: 0.15, kickPattern: 4, scale: [146.83, 155.56, 174.61, 196.00, 233.08, 293.66, 311.13, 349.23] },
+            { name: "Retrowave", wave: "sawtooth", filterMax: 3500, decay: 0.35, kickPattern: 1, scale: [110.00, 123.47, 130.81, 146.83, 164.81, 174.61, 196.00, 220.00] },
+            { name: "House", wave: "sawtooth", filterMax: 4000, decay: 0.25, kickPattern: 1, scale: [130.81, 155.56, 196.00, 233.08, 261.63, 311.13, 349.23, 392.00] },
+            { name: "Hardstyle", wave: "sawtooth", filterMax: 8000, decay: 0.4, kickPattern: 1, scale: [130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 196.00, 207.65] },
+            { name: "Ambient", wave: "sine", filterMax: 1200, decay: 0.9, kickPattern: 0, scale: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25] },
+            { name: "8-Bit", wave: "square", filterMax: 2000, decay: 0.1, kickPattern: 2, scale: [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50, 1318.51] }
+        ];
+        
+        let currentStyleIdx = 0;
+        let noteIndex = 0;
+        let bgNoteIndex = 0;
+        let nextBeatTime = 0;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.5;
+            
+            masterFilter = audioCtx.createBiquadFilter();
+            masterFilter.type = 'lowpass';
+            masterFilter.frequency.value = 20000;
+            
+            compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 30;
+            compressor.ratio.value = 12;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.25;
+            
+            delayNode = audioCtx.createDelay(5.0);
+            delayNode.delayTime.value = 0.25;
+            delayFeedback = audioCtx.createGain();
+            delayFeedback.gain.value = 0.25;
+            delayNode.connect(delayFeedback);
+            delayFeedback.connect(delayNode);
+            
+            reverbConvolver = audioCtx.createConvolver();
+            const dryGain = audioCtx.createGain();
+            const wetGain = audioCtx.createGain();
+            dryGain.gain.value = 0.85;
+            wetGain.gain.value = 0.15;
+            
+            compressor.connect(dryGain);
+            compressor.connect(reverbConvolver);
+            reverbConvolver.connect(wetGain);
+            wetGain.connect(delayNode);
+            dryGain.connect(delayNode);
+            delayNode.connect(masterFilter);
+            masterFilter.connect(masterGain);
+            masterGain.connect(audioCtx.destination);
+        }
+
+        async function ensureAudioRunning() {
+            if (!audioCtx) initAudio();
+            if (audioCtx && audioCtx.state === "suspended") {
+                try { await audioCtx.resume(); } catch (e) {}
+            }
+        }
+
+        // --- Continuous Background Beat ---
+        function playBackgroundBeat() {
+            if (isMuted || !audioCtx) return;
+            const style = musicStyles[currentStyleIdx];
+            const now = audioCtx.currentTime;
+            
+            // Continuous Kick Drum
+            const kickDuration = 0.6;
+            const kOsc = audioCtx.createOscillator(); 
+            const kGain = audioCtx.createGain();
+            kOsc.type = 'sine';
+            kOsc.frequency.setValueAtTime(150 + (speedMultiplier * 50), now);
+            kOsc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+            kOsc.frequency.exponentialRampToValueAtTime(20, now + kickDuration);
+            kGain.gain.setValueAtTime(0.8, now);
+            kGain.gain.exponentialRampToValueAtTime(0.3, now + 0.1);
+            kGain.gain.exponentialRampToValueAtTime(0.01, now + kickDuration);
+            kOsc.connect(kGain); kGain.connect(compressor);
+            kOsc.start(now); kOsc.stop(now + kickDuration);
+            
+            const clickFilter = audioCtx.createBiquadFilter(); clickFilter.type = 'highpass'; clickFilter.frequency.value = 100;
+            const clickOsc = audioCtx.createOscillator(); const clickGain = audioCtx.createGain();
+            clickOsc.type = 'square'; clickOsc.frequency.value = 100;
+            clickGain.gain.setValueAtTime(0.4, now); clickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+            clickOsc.connect(clickFilter); clickFilter.connect(clickGain); clickGain.connect(compressor);
+            clickOsc.start(now); clickOsc.stop(now + 0.08);
+            
+            // Continuous Bassline syncs with speed
+            const baseFreq = style.scale[bgNoteIndex % style.scale.length] * 0.5; // Octave lower for bass
+            bgNoteIndex++;
+            
+            const bOsc = audioCtx.createOscillator();
+            bOsc.type = style.wave === 'supersaw' ? 'sawtooth' : style.wave;
+            bOsc.frequency.setValueAtTime(baseFreq, now);
+            
+            const bGain = audioCtx.createGain();
+            bGain.gain.setValueAtTime(0.4, now);
+            bGain.gain.exponentialRampToValueAtTime(0.01, now + style.decay);
+            
+            const bFilter = audioCtx.createBiquadFilter();
+            bFilter.type = 'lowpass';
+            bFilter.frequency.setValueAtTime(400 + (speedMultiplier * 200), now);
+            
+            bOsc.connect(bFilter); bFilter.connect(bGain); bGain.connect(compressor);
+            bOsc.start(now); bOsc.stop(now + style.decay);
+            
+            // Camera shake synced EXACTLY to the beat!
+            cameraShake = 0.4 + (speedMultiplier * 0.15);
+            
+            if (typeof playerModel !== 'undefined') playerModel.scale.set(1.4, 1.4, 1.4);
+            dirLight.intensity = 3.2;
+        }
+
+        // --- Lead Melody on Hit ---
+        function playSynthNote() {
+            if (isMuted || !audioCtx) return;
+            const style = musicStyles[currentStyleIdx];
+            if (!style) return;
+            const now = audioCtx.currentTime;
+            
+            const playFreq = (freq, startTime, volMultiplier = 1.0, panValue = 0) => {
+                const panner = audioCtx.createStereoPanner();
+                panner.pan.value = panValue;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(Math.min(1000 + (combo * 300), style.filterMax), startTime);
+                filter.Q.setValueAtTime(5 + (combo * 0.5), startTime);
+                
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(0.6 * volMultiplier, startTime + 0.03);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + style.decay);
+                
+                const osc = audioCtx.createOscillator();
+                osc.type = style.wave === 'supersaw' ? 'sawtooth' : style.wave;
+                osc.frequency.setValueAtTime(freq, startTime);
+                
+                if (combo > 15) {
+                    const vibrato = audioCtx.createOscillator();
+                    const vibGain = audioCtx.createGain();
+                    vibrato.frequency.value = 5 + (combo * 0.1);
+                    vibGain.gain.value = Math.min(20, 5 + (combo * 0.5));
+                    vibrato.connect(vibGain);
+                    vibGain.connect(osc.frequency);
+                    vibrato.start(startTime);
+                    vibrato.stop(startTime + style.decay);
+                }
+                
+                osc.connect(filter); filter.connect(panner); panner.connect(gainNode); gainNode.connect(compressor);
+                osc.start(startTime); osc.stop(startTime + style.decay);
+            };
+
+            // Play Lead Arp higher up
+            const baseFreq = style.scale[noteIndex] * 2.0; 
+            noteIndex = (noteIndex + 1) % style.scale.length;
+            if(Math.random() > 0.8) noteIndex = Math.floor(Math.random() * style.scale.length);
+
+            playFreq(baseFreq, now, 1.0, 0);
+            if (combo >= 10) playFreq(style.scale[(noteIndex + 2) % style.scale.length] * 2.0, now + 0.02, 0.6, -0.3);
+            if (combo >= 20) playFreq(baseFreq * 2, now + 0.08, 0.5, 0.3);
+        }
+
+        // ==========================================
+        // 4. GEMINI API CHAT (Voor In-Game Functies)
+        // ==========================================
+        async function triggerAIPerformanceCoach(comboAmount) {
+            const msgEl = ui.coach;
+            if (!msgEl) return;
+            if (comboAmount > 30) {
+                let text = "Beat dropped. Focus reloading. Rebuild momentum.";
+                if (hasGeminiKey()) {
+                    try {
+                        const prompt = `The player just tragically broke an epic rhythm game combo of ${comboAmount}. Write a dramatic 3-line haiku in English about this failure. Return ONLY the 3 lines.`;
+                        text = (await callGemini(prompt)) || text;
+                    } catch(e) {}
+                }
+                msgEl.innerHTML = text.replace(/\n/g, '<br>');
+                msgEl.style.color = '#fff';
+                msgEl.style.opacity = 1;
+                speakText("Combo broken. " + text, "Zephyr"); 
+                setTimeout(() => msgEl.style.opacity = 0, 6000);
+            } else {
+                const motivatie = comboAmount > 10 ? "Great run!" : "Don't lose the rhythm!";
+                msgEl.innerText = motivatie;
+                msgEl.style.color = 'var(--secondary-color)';
+                msgEl.style.opacity = 1;
+                speakText(motivatie, "Zephyr");
+                setTimeout(() => msgEl.style.opacity = 0, 3000);
+            }
+        }
+
+        async function triggerAIMotivation(currentCombo) {
+            let motivation = "";
+            if (hasGeminiKey()) {
+                try {
+                    const prompt = `The player just hit an amazing continuous combo of ${currentCombo} in a futuristic high-speed rhythm game. Generate a short, punchy, aggressive motivational phrase of 2-5 words in English as a female AI military co-pilot. Do not use quotes.`;
+                    motivation = (await callGemini(prompt)) || currentTheme.combo20Msg;
+                } catch(e) {
+                    motivation = currentTheme.combo20Msg || "Great job! Hold it!";
+                }
+            } else {
+                const fallbacks = [
+                    "Great job! Keep going!",
+                    "You are a machine!",
+                    "Perfect synchronization!",
+                    "Unstoppable momentum!",
+                    "Stay in the flow!"
+                ];
+                motivation = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+            }
+            
+            const msgEl = ui.coach;
+            if (msgEl) {
+                msgEl.innerText = motivation;
+                msgEl.style.color = 'var(--primary-color)';
+                msgEl.style.opacity = 1;
+                speakText(motivation, "Aoede"); 
+                setTimeout(() => { if(msgEl.innerText === motivation) msgEl.style.opacity = 0; }, 3500);
+            }
+        }
+
+        async function triggerInvasion() {
+            isInvasionActive = true;
+            let taunt = "Signal compromised. Control contested.";
+            if (hasGeminiKey()) {
+                try {
+                    const prompt = "You are a rogue AI hacking into a neon rhythm game. Generate a villainous 1-sentence taunt in English indicating you are taking over.";
+                    taunt = (await callGemini(prompt)) || taunt;
+                } catch(e) {}
+            }
+            
+            const tBox = ui.transmissionBox;
+            ui.transmissionText.innerText = taunt;
+            tBox.style.display = 'block';
+            
+            speakText(taunt, "Fenrir");
+            setGridColor(0xff0000);
+            playerModel.material.emissive.setHex(0xff0000);
+            dirLight.color.setHex(0xff0000);
+            scene.fog.color.setHex(0x330000);
+            cameraShake = 1.0; 
+            
+            setTimeout(() => {
+                tBox.style.display = 'none';
+                if (gameActive && isInvasionActive) { 
+                    setGridColor(currentTheme.gridColor);
+                    playerModel.material.emissive.set(currentTheme.gridColor);
+                    dirLight.color.set(currentTheme.lightColor);
+                    scene.fog.color.set(currentTheme.fogColor);
+                }
+                isInvasionActive = false;
+            }, 6000);
+        }
+
+        // ✨ NIEUW: AI Extractie Missierapport
+        async function extractRun() {
+            if (!gameActive) return;
+            gameActive = false;
+            isPaused = false;
+            clearTransientObjects();
+            
+            const reportModal = document.getElementById('mission-report');
+            const reportText = document.getElementById('report-text');
+            const reportStats = document.getElementById('report-stats');
+            
+            reportModal.style.display = 'block';
+            reportStats.innerText = `Score: ${score} | Max Combo: ${maxComboThisRun}`;
+            reportText.innerHTML = `<span style="color:var(--primary-color); animation: pulse 1s infinite alternate;">✨ AI Analyzing run data... ✨</span>`;
+            
+            if (hasGeminiKey()) {
+                try {
+                    const prompt = `Write a gritty, immersive cyberpunk mission report of 2 sentences in English. The pilot just voluntarily extracted from the dangerous sector "${currentTheme.name}". The pilot achieved a score of ${score} and maintained a max combo of ${maxComboThisRun}. Do not use quotes.`;
+                    const aiReport = await callGemini(prompt);
+                    if (aiReport) {
+                        reportText.innerText = `"${aiReport}"`;
+                        speakText(aiReport, currentTheme.voiceName);
+                    } else {
+                        reportText.innerText = "Extraction successful. Data saved locally.";
+                        speakText("Extraction successful", currentTheme.voiceName);
+                    }
+                } catch (e) {
+                    reportText.innerText = "Extraction successful. AI analysis failed due to interference.";
+                }
+            } else {
+                const lokaalRapport = `Extraction from sector ${currentTheme.name} successful. Score recorded.`;
+                reportText.innerText = lokaalRapport;
+                speakText(lokaalRapport, currentTheme.voiceName);
+            }
+        }
+        
+        document.getElementById('btn-close-report').addEventListener('click', () => {
+            document.getElementById('mission-report').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('start-screen').style.opacity = '1';
+        });
+
+        // ==========================================
+        // 5. 3D SCENE SETUP & GAME ENGINE
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050510, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 12);
+        camera.lookAt(0, 0, -20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const gridHelper = new THREE.GridHelper(200, 100, 0x00ffff, 0x002244);
+        gridHelper.position.y = -2;
+        scene.add(gridHelper);
+
+        function setGridColor(colorValue) {
+            if (Array.isArray(gridHelper.material)) {
+                for (let i = 0; i < gridHelper.material.length; i++) gridHelper.material[i].color.set(colorValue);
+                return;
+            }
+            gridHelper.material.color.set(colorValue);
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xff00ff, 1.5);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        const balls = [], particles = [];
+        const mouse = new THREE.Vector2(), raycaster = new THREE.Raycaster();
+        const target = new THREE.Vector3();
+        const playerScaleTarget = new THREE.Vector3(1, 1, 1);
+
+        const interactionZ = 8;
+        const hitPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -interactionZ);
+        
+        const playerGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+        const playerMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 0.8, shininess: 100 
+        });
+        const playerModel = new THREE.Mesh(playerGeometry, playerMaterial);
+        scene.add(playerModel);
+        
+        const trailParticles = [];
+        const explosionGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        const trailGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+        const trailMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+        const explosionMaterialCache = new Map();
+        const envGroup = new THREE.Group();
+        scene.add(envGroup);
+        const envObjects = [];
+
+        function buildEnvironment(type, colorHex) {
+            while (envGroup.children.length > 0) envGroup.remove(envGroup.children[0]);
+            envObjects.length = 0;
+            const color = new THREE.Color(colorHex);
+
+            if (type === 'city') {
+                const boxGeo = new THREE.BoxGeometry(3, 1, 3);
+                const mat = new THREE.MeshPhongMaterial({ color, transparent: true, opacity: 0.8, wireframe: true });
+                for (let i = 0; i < 60; i++) {
+                    const height = Math.random() * 20 + 5;
+                    const mesh = new THREE.Mesh(boxGeo, mat);
+                    mesh.scale.y = height;
+                    mesh.position.x = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 40 + 15);
+                    mesh.position.y = (height / 2) - 2;
+                    mesh.position.z = (Math.random() - 0.5) * 200;
+                    envGroup.add(mesh);
+                    envObjects.push(mesh);
+                }
+            } else if (type === 'stars') {
+                const starGeo = new THREE.BufferGeometry();
+                const starCount = 2000;
+                const posArray = new Float32Array(starCount * 3);
+                for(let i = 0; i < starCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 300;
+                starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                envGroup.add(new THREE.Points(starGeo, new THREE.PointsMaterial({size: 0.5, color})));
+            }
+        }
+
+        const ballGeometry = new THREE.SphereGeometry(1.95, 24, 24);
+
+        function removeBallAt(index) {
+            const ball = balls[index];
+            if (!ball) return;
+            scene.remove(ball);
+            if (ball.material && typeof ball.material.dispose === "function") ball.material.dispose();
+            balls.splice(index, 1);
+        }
+
+        function getExplosionMaterial(color) {
+            const key = color.getHexString ? color.getHexString() : String(color);
+            if (explosionMaterialCache.has(key)) return explosionMaterialCache.get(key);
+            const material = new THREE.MeshBasicMaterial({ color });
+            explosionMaterialCache.set(key, material);
+            return material;
+        }
+
+        function createExplosion(position, color) {
+            for (let i = 0; i < 10; i++) {
+                if (particles.length >= MAX_PARTICLES) break;
+                const p = new THREE.Mesh(explosionGeometry, getExplosionMaterial(color));
+                p.position.copy(position);
+                p.velocity = new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3);
+                p.life = 1.0;
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        function spawnBall() {
+            if (!gameActive || isPaused || balls.length >= MAX_BALLS) return;
+            const color = new THREE.Color().setHSL(Math.random(), 1, 0.6);
+            const ball = new THREE.Mesh(ballGeometry, new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.6, shininess: 100 }));
+            
+            const t = Math.random();
+            const xOffset = Math.sin(t * Math.PI * 2) * 8; 
+            const yOffset = (t - 0.5) * 6; 
+            
+            ball.position.set(xOffset, yOffset, -120);
+            ball.userData = { hit: false, color };
+            scene.add(ball);
+            balls.push(ball);
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1, bitsPerSample = 16;
+            const buffer = new ArrayBuffer(44 + pcmData.length);
+            const view = new DataView(buffer);
+            const writeStr = (o, s) => { for (let i=0; i<s.length; i++) view.setUint8(o+i, s.charCodeAt(i)); };
+            writeStr(0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true);
+            writeStr(8, 'WAVE'); writeStr(12, 'fmt '); view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate*2, true);
+            view.setUint16(32, 2, true); view.setUint16(34, bitsPerSample, true);
+            writeStr(36, 'data'); view.setUint32(40, pcmData.length, true);
+            new Uint8Array(buffer, 44).set(new Uint8Array(pcmData));
+            return buffer;
+        }
+
+        function hasGeminiKey() { return typeof apiKey === "string" && apiKey.trim().length > 0; }
+
+        async function withTimeout(promise, timeoutMs) {
+            let timeoutId;
+            const timeoutPromise = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error("Request timeout")), timeoutMs); });
+            try { return await Promise.race([promise, timeoutPromise]); } finally { clearTimeout(timeoutId); }
+        }
+
+        function normalizeHex(value, fallback) {
+            if (typeof value !== "string") return fallback;
+            const cleaned = value.trim().replace(/^#/, "");
+            if (!/^[0-9a-fA-F]{6}$/.test(cleaned)) return fallback;
+            return `#${cleaned.toLowerCase()}`;
+        }
+
+        function normalizeTheme(rawTheme, ideaText = "") {
+            const candidate = rawTheme && typeof rawTheme === "object" ? rawTheme : {};
+            const derivedName = String(candidate.name || candidate.themeName || ideaText || currentTheme.name || "Neon Default").slice(0, 42);
+            const envType = candidate.envType === "stars" ? "stars" : "city";
+            return {
+                name: derivedName,
+                voiceName: String(candidate.voiceName || currentTheme.voiceName || "Kore"),
+                startMsg: String(candidate.startMsg || "Welcome to the grid."),
+                combo10Msg: String(candidate.combo10Msg || "Awesome combo!"),
+                combo20Msg: String(candidate.combo20Msg || "Unstoppable momentum!"),
+                envType,
+                fogColor: normalizeHex(candidate.fogColor, currentTheme.fogColor || "#050510"),
+                gridColor: normalizeHex(candidate.gridColor, currentTheme.gridColor || "#00ffff"),
+                lightColor: normalizeHex(candidate.lightColor, currentTheme.lightColor || "#ff00ff")
+            };
+        }
+
+        function generateLocalTheme(promptIdea) {
+            const seed = String(promptIdea || "Neon Grid");
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+            const palettes = [
+                { fogColor: "#0d1626", gridColor: "#5ce1e6", lightColor: "#ffad66" },
+                { fogColor: "#140f24", gridColor: "#67f7ff", lightColor: "#ff4da6" },
+                { fogColor: "#091b17", gridColor: "#6dff9a", lightColor: "#f6ff7a" },
+                { fogColor: "#151212", gridColor: "#ff9f6e", lightColor: "#ffe16b" }
+            ];
+            const palette = palettes[Math.abs(hash) % palettes.length];
+            const lower = seed.toLowerCase();
+            const envType = (lower.includes("space") || lower.includes("star") || lower.includes("galaxy") || lower.includes("ruimte")) ? "stars" : "city";
+            return normalizeTheme({
+                name: seed, envType, voiceName: "Kore",
+                startMsg: `Entering ${seed}. Maintain your rhythm.`,
+                combo10Msg: "Combo lock acquired.",
+                combo20Msg: "Vector stable. Go faster.",
+                ...palette
+            }, seed);
+        }
+
+        async function callGemini(prompt) {
+            if (!hasGeminiKey()) return "";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const response = await withTimeout(fetch(url, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            }), 5500);
+            if (!response.ok) throw new Error(`Gemini text request failed: ${response.status}`);
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+        }
+
+        async function speakText(text, voice = currentTheme.voiceName) {
+            if (isMuted) return;
+
+            if (!hasGeminiKey()) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US'; 
+                    utterance.pitch = voice === 'Fenrir' ? 0.6 : 1.1; 
+                    utterance.rate = 1.1;
+                    window.speechSynthesis.speak(utterance);
+                }
+                return;
+            }
+
+            if (!audioCtx) return;
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const response = await withTimeout(fetch(url, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `Say with a very excited, highly expressive, and human-like voice: ${text}` }] }],
+                        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
+                        model: "gemini-2.5-flash-preview-tts"
+                    })
+                }), 7000);
+                if (!response.ok) return;
+                const data = await response.json();
+                const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                if (inlineData) {
+                    const sampleRate = parseInt(inlineData.mimeType.match(/rate=(\d+)/)?.[1] || 24000);
+                    const binaryStr = atob(inlineData.data);
+                    const pcmData = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) pcmData[i] = binaryStr.charCodeAt(i);
+                    const audioBuffer = await audioCtx.decodeAudioData(pcmToWav(pcmData.buffer, sampleRate));
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioCtx.destination);
+                    source.start();
+                }
+            } catch(e) {}
+        }
+
+        async function generateTheme(promptIdea) {
+            if (!hasGeminiKey()) return generateLocalTheme(promptIdea);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const response = await withTimeout(fetch(url, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                contents: [{ parts: [{ text: `Create a game environment based on: "${promptIdea}". Use English terms.` }] }],
+                generationConfig: { 
+                    responseMimeType: "application/json", 
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            themeName: { type: "STRING" }, fogColor: { type: "STRING" }, gridColor: { type: "STRING" }, lightColor: { type: "STRING" },
+                            envType: { type: "STRING" }, voiceName: { type: "STRING" }, startMsg: { type: "STRING" }, combo10Msg: { type: "STRING" }, combo20Msg: { type: "STRING" }
+                        },
+                        required: ["themeName", "fogColor", "gridColor", "lightColor", "envType", "voiceName", "startMsg", "combo10Msg", "combo20Msg"]
+                    }
+                }
+                })
+            }), 7000);
+            if (!response.ok) return generateLocalTheme(promptIdea);
+            const data = await response.json();
+            const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+            try { return normalizeTheme(JSON.parse(rawText), promptIdea); } 
+            catch (e) { return generateLocalTheme(promptIdea); }
+        }
+
+        // ==========================================
+        // 6. INPUT, UI UPDATES & ANIMATIE LOOP
+        // ==========================================
+        function updatePointer(clientX, clientY) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            mouse.x = (x / rect.width) * 2 - 1;
+            mouse.y = -(y / rect.height) * 2 + 1;
+        }
+
+        function updateHud() {
+            ui.score.innerText = score;
+            ui.combo.innerText = combo;
+            ui.speed.innerText = `${speedMultiplier.toFixed(1)}x`;
+            ui.style.innerText = musicStyles[currentStyleIdx].name;
+            ui.lives.innerText = lives;
+            ui.lives.style.color = lives <= 1 ? "#ff6b6b" : "#ffffff";
+        }
+
+        function applyTheme(themeConfig) {
+            currentTheme = normalizeTheme(themeConfig, currentTheme.name);
+            document.documentElement.style.setProperty("--primary-color", currentTheme.gridColor);
+            document.documentElement.style.setProperty("--secondary-color", currentTheme.lightColor);
+            scene.fog.color.set(currentTheme.fogColor);
+            scene.background = new THREE.Color(currentTheme.fogColor);
+            setGridColor(currentTheme.gridColor);
+            playerMaterial.emissive.set(currentTheme.gridColor);
+            dirLight.color.set(currentTheme.lightColor);
+            buildEnvironment(currentTheme.envType, currentTheme.gridColor);
+            ui.theme.innerText = `THEME: ${currentTheme.name.toUpperCase()}`;
+            ui.theme.style.display = "block";
+        }
+
+        function clearTransientObjects() {
+            for (let i = balls.length - 1; i >= 0; i--) removeBallAt(i);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                scene.remove(particles[i]);
+                particles.splice(i, 1);
+            }
+            for (let i = trailParticles.length - 1; i >= 0; i--) {
+                const trail = trailParticles[i];
+                scene.remove(trail);
+                if (trail.material && typeof trail.material.dispose === "function") trail.material.dispose();
+                trailParticles.splice(i, 1);
+            }
+        }
+
+        function resetRunState() {
+            score = 0;
+            combo = 0;
+            maxComboThisRun = 0;
+            consecutiveMisses = 0;
+            lives = maxLives;
+            speedMultiplier = 1.0;
+            currentCamX = 0;
+            currentCamY = 5;
+            cameraShake = 0;
+            isInvasionActive = false;
+            isPaused = false;
+            nextBeatTime = 0;
+            noteIndex = 0;
+            bgNoteIndex = 0;
+            lastSpawnTime = 0;
+            missRecoveryUntil = 0;
+            clearTransientObjects();
+            ui.transmissionBox.style.display = "none";
+            
+            // Reset FOV
+            camera.fov = 75;
+            camera.updateProjectionMatrix();
+            
+            updateHud();
+        }
+
+        async function startGame() {
+            if (gameActive) return;
+            resetRunState();
+            await ensureAudioRunning();
+            ui.startSubtitle.innerHTML = "A procedural, AI-powered musical experience.<br>Don't miss a sphere, or the beat drops out!";
+            ui.startScreen.style.opacity = "0";
+            applyTheme(currentTheme);
+            setTimeout(() => {
+                ui.startScreen.style.display = "none";
+                gameActive = true;
+                spawnBall();
+                speakText(currentTheme.startMsg);
+            }, 420);
+        }
+
+        window.addEventListener("pointermove", (e) => updatePointer(e.clientX, e.clientY), { passive: true });
+        window.addEventListener("touchmove", (e) => {
+            if (e.touches.length > 0) updatePointer(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        window.addEventListener("keydown", (e) => {
+            const key = e.key.toLowerCase();
+            if (key === "m") {
+                currentStyleIdx = (currentStyleIdx + 1) % musicStyles.length;
+                updateHud();
+            }
+            if (key === " ") {
+                e.preventDefault();
+                isMuted = !isMuted;
+                if (masterGain && audioCtx) masterGain.gain.setValueAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime);
+            }
+            if (key === "p" && gameActive) {
+                isPaused = !isPaused;
+                ui.coach.style.opacity = "1";
+                ui.coach.style.color = "#ffffff";
+                ui.coach.innerText = isPaused ? "Paused" : "Resumed";
+                setTimeout(() => { if (ui.coach.innerText === "Paused" || ui.coach.innerText === "Resumed") ui.coach.style.opacity = 0; }, 1200);
+            }
+            if (key === "e" && gameActive) {
+                extractRun(); 
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        });
+
+        ui.btnStartDefault.addEventListener("click", startGame);
+
+        ui.btnGenerate.addEventListener("click", async () => {
+            const input = ui.themeInput.value.trim();
+            if (!input) return;
+            ui.btnGenerate.disabled = true;
+            ui.loadingText.style.display = "block";
+            try { currentTheme = await generateTheme(input); } 
+            catch (e) { currentTheme = generateLocalTheme(input); } 
+            finally {
+                ui.btnGenerate.disabled = false;
+                ui.loadingText.style.display = "none";
+            }
+            startGame();
+        });
+        
+        updateHud();
+        let lastSpawnTime = 0;
+        
+        function animate(time) {
+            requestAnimationFrame(animate);
+            if (!gameActive) {
+                if (currentTheme.envType === "stars") envGroup.rotation.y += 0.001;
+                renderer.render(scene, camera);
+                return;
+            }
+            if (isPaused) {
+                renderer.render(scene, camera);
+                return;
+            }
+
+            const moveSpeed = baseSpeed * speedMultiplier;
+            ui.speed.innerText = `${speedMultiplier.toFixed(1)}x`;
+            gridHelper.position.z = (gridHelper.position.z + moveSpeed) % 20;
+            
+            // DYNAMISCHE FOV (ZOOM EFFECT) BIJ VERSNELLING
+            const targetFov = 75 + ((speedMultiplier - 1.0) * 15);
+            camera.fov += (targetFov - camera.fov) * 0.1;
+            camera.updateProjectionMatrix();
+
+            if (currentTheme.envType === "city") {
+                for (let i = 0; i < envObjects.length; i++) {
+                    const object = envObjects[i];
+                    object.position.z += moveSpeed * 0.5;
+                    if (object.position.z > 20) object.position.z = -180;
+                }
+            }
+
+            // ACHTERGRONDMUZIEK - Speelt altijd, tempo is gesynct met Snelheid
+            if (audioCtx && !isMuted) {
+                const kickPattern = musicStyles[currentStyleIdx].kickPattern;
+                if (kickPattern > 0) {
+                    const interval = 1.0 / (speedMultiplier * kickPattern);
+                    if (audioCtx.currentTime >= nextBeatTime) {
+                        playBackgroundBeat();
+                        nextBeatTime = audioCtx.currentTime + interval;
+                    }
+                }
+            }
+
+            const baseInterval = (BALANCE.spawnStartMs - BALANCE.spawnSpeedFactorMs) / speedMultiplier;
+            const spawnInterval = Math.max(
+                BALANCE.spawnFloorMs,
+                baseInterval - (Math.min(combo, 50) * (BALANCE.spawnComboFactorMs * 1.5))
+            );
+            
+            if (time - lastSpawnTime > spawnInterval) {
+                spawnBall();
+                lastSpawnTime = time;
+            }
+
+            raycaster.setFromCamera(mouse, camera);
+            const hasIntersection = !!raycaster.ray.intersectPlane(hitPlane, target);
+            if (hasIntersection) {
+                playerModel.position.lerp(target, 0.9);
+                playerModel.rotation.x += 0.02 * speedMultiplier;
+                playerModel.rotation.y += 0.03 * speedMultiplier;
+
+                const targetCamX = target.x * 0.15;
+                const targetCamY = (target.y * 0.15) + 5;
+                currentCamX += (targetCamX - currentCamX) * 0.1;
+                currentCamY += (targetCamY - currentCamY) * 0.1;
+
+                let shakeX = 0;
+                let shakeY = 0;
+                if (cameraShake > 0.01) {
+                    shakeX = (Math.random() - 0.5) * cameraShake;
+                    shakeY = (Math.random() - 0.5) * cameraShake;
+                    cameraShake *= 0.85;
+                }
+
+                camera.position.x = currentCamX + shakeX;
+                camera.position.y = currentCamY + shakeY;
+                camera.lookAt(0, 0, -20);
+
+                if (Math.random() > 0.3 && trailParticles.length < MAX_TRAILS) {
+                    trailMaterial.color.set(playerMaterial.emissive);
+                    const trailMesh = new THREE.Mesh(trailGeometry, trailMaterial.clone());
+                    trailMesh.position.copy(playerModel.position);
+                    trailMesh.life = 1.0;
+                    scene.add(trailMesh);
+                    trailParticles.push(trailMesh);
+                }
+            }
+
+            playerModel.scale.lerp(playerScaleTarget, 0.15);
+            dirLight.intensity += (1.5 - dirLight.intensity) * 0.15;
+            if (currentTheme.gridColor) playerMaterial.emissive.set(currentTheme.gridColor);
+
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                ball.position.z += moveSpeed;
+                ball.position.y = Math.sin(time * 0.005 * speedMultiplier + ball.position.x) * 2;
+
+                if (!ball.userData.hit && hasIntersection) {
+                    const zDistToPlane = ball.position.z - interactionZ;
+                    const zWindowBehind = BALANCE.zWindowBehindBase + (moveSpeed * BALANCE.zWindowBehindSpeedScale);
+                    if (zDistToPlane > -zWindowBehind && zDistToPlane < BALANCE.zWindowAhead) {
+                        const dx = ball.position.x - target.x;
+                        const dy = ball.position.y - target.y;
+                        const xyDist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        const baseHitRadius = 7.2; 
+                        const dynamicHitRadius = Math.max(4.8, baseHitRadius - (combo * BALANCE.hitRadiusTightenPerCombo)); 
+
+                        if (xyDist < dynamicHitRadius) {
+                            ball.userData.hit = true;
+                            score += 10 + combo;
+                            combo++;
+                            consecutiveMisses = 0; 
+                            
+                            speedMultiplier = Math.min(speedMultiplier + BALANCE.speedGainPerCombo, BALANCE.maxSpeedMultiplier);
+                            
+                            if (combo > maxComboThisRun) maxComboThisRun = combo; 
+                            
+                            playSynthNote();
+                            updateHud();
+
+                            playerModel.scale.set(1.8, 1.8, 1.8);
+
+                            if (combo > 0 && combo % 10 === 0) triggerAIMotivation(combo);
+                            
+                            if (combo > 0 && combo % BALANCE.lifeRegenComboStep === 0 && lives < maxLives) {
+                                lives += 1;
+                                updateHud();
+                            }
+                            if (combo === 35 && !isInvasionActive) triggerInvasion();
+
+                            createExplosion(playerModel.position, ball.userData.color);
+                            removeBallAt(i);
+                            continue;
+                        }
+                    }
+                }
+
+                if (ball.position.z > interactionZ + 2) {
+                    const inRecovery = time < missRecoveryUntil;
+                    if (!inRecovery) {
+                        if (combo > 5) triggerAIPerformanceCoach(combo);
+                        combo = 0;
+                        
+                        consecutiveMisses++;
+                        if (consecutiveMisses >= 3) {
+                            speedMultiplier = Math.max(1.0, speedMultiplier * 0.75);
+                            consecutiveMisses = 0;
+                        }
+                        
+                        missRecoveryUntil = time + BALANCE.missRecoveryMs;
+
+                        if (isInvasionActive) {
+                            setGridColor(currentTheme.gridColor);
+                            playerModel.material.emissive.set(currentTheme.gridColor);
+                            dirLight.color.set(currentTheme.lightColor);
+                            scene.fog.color.set(currentTheme.fogColor);
+                            ui.transmissionBox.style.display = "none";
+                            isInvasionActive = false;
+                        }
+
+                        updateHud();
+                    }
+
+                    removeBallAt(i);
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                particle.position.add(particle.velocity);
+                particle.life -= 0.03;
+                particle.scale.setScalar(Math.max(0, particle.life));
+                if (particle.life <= 0) {
+                    scene.remove(particle);
+                    particles.splice(i, 1);
+                }
+            }
+
+            for (let i = trailParticles.length - 1; i >= 0; i--) {
+                const trail = trailParticles[i];
+                trail.life -= 0.05;
+                trail.scale.setScalar(Math.max(0, trail.life));
+                trail.position.z += moveSpeed * 0.5;
+                if (trail.life <= 0) {
+                    scene.remove(trail);
+                    if (trail.material && typeof trail.material.dispose === "function") trail.material.dispose();
+                    trailParticles.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        applyTheme(currentTheme);
+        animate(0);
+    </script>
+</body>
+</html>
