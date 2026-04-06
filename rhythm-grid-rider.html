@@ -1432,10 +1432,17 @@
 
                 if (ball.position.z > interactionZ + 2) {
                     const inRecovery = time < missRecoveryUntil;
+                    lives = Math.max(0, lives - 1);
+                    updateHud();
+                    if (lives === 0) {
+                        endRunFromMiss();
+                        removeBallAt(i);
+                        break;
+                    }
+
                     if (!inRecovery) {
                         if (combo > 5) triggerAIPerformanceCoach(combo);
                         combo = 0;
-                        lives = Math.max(0, lives - 1);
                         
                         consecutiveMisses++;
                         if (consecutiveMisses >= 3) {
@@ -1453,9 +1460,6 @@
                             ui.transmissionBox.style.display = "none";
                             isInvasionActive = false;
                         }
-
-                        updateHud();
-                        if (lives === 0) endRunFromMiss();
                     }
 
                     removeBallAt(i);
