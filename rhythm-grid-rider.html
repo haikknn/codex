@@ -818,6 +818,23 @@
         }
 
         // ✨ NIEUW: AI Extractie Missierapport
+        function endRunByFailure() {
+            gameActive = false;
+            isPaused = false;
+            clearTransientObjects();
+            ui.transmissionBox.style.display = "none";
+
+            const reportModal = document.getElementById('mission-report');
+            const reportText = document.getElementById('report-text');
+            const reportStats = document.getElementById('report-stats');
+
+            reportModal.style.display = 'block';
+            reportStats.innerText = `Score: ${score} | Max Combo: ${maxComboThisRun}`;
+            reportText.innerText = `Run failed in sector ${currentTheme.name}. No lives remaining.`;
+            speakText("Run failed. No lives remaining.", currentTheme.voiceName);
+        }
+
+        // ✨ NIEUW: AI Extractie Missierapport
         async function extractRun() {
             if (!gameActive) return;
             gameActive = false;
@@ -1425,6 +1442,7 @@
                     if (!inRecovery) {
                         if (combo > 5) triggerAIPerformanceCoach(combo);
                         combo = 0;
+                        lives = Math.max(0, lives - 1);
                         
                         consecutiveMisses++;
                         if (consecutiveMisses >= 3) {
@@ -1433,6 +1451,13 @@
                         }
                         
                         missRecoveryUntil = time + BALANCE.missRecoveryMs;
+
+                        if (lives === 0) {
+                            updateHud();
+                            endRunByFailure();
+                            removeBallAt(i);
+                            continue;
+                        }
 
                         if (isInvasionActive) {
                             setGridColor(currentTheme.gridColor);
