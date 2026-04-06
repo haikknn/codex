@@ -1160,6 +1160,16 @@
             ui.lives.style.color = lives <= 1 ? "#ff6b6b" : "#ffffff";
         }
 
+        function endRunFromMiss() {
+            gameActive = false;
+            isPaused = false;
+            clearTransientObjects();
+            ui.startSubtitle.innerHTML = `Run failed. Score: ${score} • Max Combo: ${maxComboThisRun}<br>Stay in sync and try again.`;
+            ui.startScreen.style.display = "flex";
+            ui.startScreen.style.opacity = "1";
+            speakText("Run failed. Recalibrating for another attempt.", currentTheme.voiceName);
+        }
+
         function applyTheme(themeConfig) {
             currentTheme = normalizeTheme(themeConfig, currentTheme.name);
             document.documentElement.style.setProperty("--primary-color", currentTheme.gridColor);
@@ -1425,6 +1435,7 @@
                     if (!inRecovery) {
                         if (combo > 5) triggerAIPerformanceCoach(combo);
                         combo = 0;
+                        lives = Math.max(0, lives - 1);
                         
                         consecutiveMisses++;
                         if (consecutiveMisses >= 3) {
@@ -1444,6 +1455,7 @@
                         }
 
                         updateHud();
+                        if (lives === 0) endRunFromMiss();
                     }
 
                     removeBallAt(i);
