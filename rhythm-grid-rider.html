@@ -1455,8 +1455,7 @@
                         if (lives === 0) {
                             updateHud();
                             endRunByFailure();
-                            removeBallAt(i);
-                            continue;
+                            break;
                         }
 
                         if (isInvasionActive) {
