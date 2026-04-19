@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>GRID RIDER 2.0 — Premium Upgrade Notes + Drop-in Patch</title>
+<style>
+  body {
+    font-family: Inter, Arial, sans-serif;
+    margin: 0;
+    background: #0a0d16;
+    color: #eef3ff;
+    line-height: 1.55;
+    padding: 28px;
+  }
+  h1, h2, h3 { margin: 0 0 12px; }
+  h1 { font-size: 28px; }
+  h2 { margin-top: 28px; font-size: 20px; color: #7df9ff; }
+  h3 { margin-top: 18px; font-size: 16px; color: #ffd86f; }
+  p, li { color: #c8d2ea; }
+  pre {
+    white-space: pre-wrap;
+    background: #0f1524;
+    border: 1px solid rgba(125,249,255,0.18);
+    border-radius: 14px;
+    padding: 18px;
+    overflow: auto;
+    color: #eaf7ff;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .note {
+    background: rgba(125,249,255,0.07);
+    border: 1px solid rgba(125,249,255,0.14);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+</style>
+</head>
+<body>
+<h1>GRID RIDER 2.0 — Premium Upgrade Pass</h1>
+<p>This is a focused polish pass for the code you pasted. The goal is not “more stuff.” The goal is <strong>more premium feel</strong>: heavier motion, cleaner pacing, better readability, better moment-to-moment impact, and less noisy chaos.</p>
+
+<div class="note">
+  Apply the patches below inside your current file. They are written as drop-in replacements and additive helpers so you do not need to rewrite the whole project.
+</div>
+
+<h2>1) Add these new tuning values inside <code>BALANCE</code></h2>
+<pre><code>cameraFollow: 0.115,
+cameraLookAhead: 0.24,
+cameraTilt: 0.045,
+cameraRoll: 0.028,
+cameraLazyReturn: 0.065,
+playerFollow: 0.24,
+playerFrontPush: 1.22,
+playerTiltX: 0.028,
+playerTiltY: 0.065,
+playerTiltZ: 0.05,
+spawnCooldownSafety: 90,
+spawnRhythmJitter: 24,
+trailSpawnRate: 0.34,
+trailMax: 150,
+hitStopPerfectMs: 44,
+hitStopGreatMs: 26,
+hitZoom: 1.35,
+hitZoomRecover: 0.11,
+perfectFlashOpacity: 0.18,
+comboGlowBoost: 0.014,
+pulseRingBoost: 0.16,</code></pre>
+
+<h2>2) Add these new state variables near your other globals</h2>
+<pre><code>let hitStopUntil = 0;
+let cameraBank = 0;
+let targetCameraBank = 0;
+let comboGlow = 0;
+let boostFovUntil = 0;
+let lastTrailSpawn = 0;
+let spawnClock = 0;
+let nearMissChain = 0;
+let lastPerfectAt = 0;</code></pre>
+
+<h2>3) Make the HUD feel more expensive</h2>
+<p>Add this CSS at the end of your existing style block.</p>
+<pre><code>.hud-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 0 0 1px rgba(255,255,255,0.02),
+    0 10px 40px rgba(0,0,0,0.18);
+}
+
+.hud-panel::after {
+  content: '';
+  position: absolute;
+  inset: auto 8px 0 8px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,245,212,0.45), transparent);
+  opacity: 0.55;
+}
+
+#combo-core {
+  filter: drop-shadow(0 0 20px rgba(247,37,133,0.18));
+}
+
+#combo-number {
+  transition: transform 0.15s ease, text-shadow 0.2s ease;
+}
+
+#perfect-ring {
+  backdrop-filter: blur(1px);
+}
+
+#hit-flash {
+  mix-blend-mode: screen;
+}
+
+.premium-pop {
+  animation: premiumPop 0.16s ease-out;
+}
+
+@keyframes premiumPop {
+  0% { transform: scale(0.92); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}</code></pre>
+
+<h2>4) Replace your <code>flashHit</code> function with this stronger version</h2>
+<pre><code>function flashHit(color, opacity = 1, duration = 240) {
+  ui.hitFlash.style.background = color;
+  ui.hitFlash.style.opacity = String(opacity);
+  ui.hitFlash.style.transition = 'none';
+  void ui.hitFlash.offsetWidth;
+  requestAnimationFrame(() =&gt; {
+    ui.hitFlash.style.transition = `opacity ${duration}ms ease`;
+    ui.hitFlash.style.opacity = '0';
+  });
+}</code></pre>
+
+<h2>5) Add premium helpers under your utility functions</h2>
+<pre><code>function kickHud(el) {
+  if (!el) return;
+  el.classList.remove('premium-pop');
+  void el.offsetWidth;
+  el.classList.add('premium-pop');
+}
+
+function addHitStop(ms) {
+  hitStopUntil = Math.max(hitStopUntil, performance.now() + ms);
+}
+
+function addCameraPunch(amount = 0.5, zoomMs = 140) {
+  cameraShake = Math.max(cameraShake, amount);
+  boostFovUntil = Math.max(boostFovUntil, performance.now() + zoomMs);
+}
+
+function premiumTrailColor() {
+  if (isOverdrive) return new THREE.Color().setHSL((performance.now() * 0.001) % 1, 1, 0.62);
+  if (combo &gt;= 30) return new THREE.Color('#ffd60a');
+  if (combo &gt;= 12) return new THREE.Color('#00f5d4');
+  return new THREE.Color(currentTheme.gridColor);
+}
+
+function spawnTrail(now) {
+  if (trailParticles.length &gt;= BALANCE.trailMax) return;
+  if (now - lastTrailSpawn &lt; 1000 / (30 * BALANCE.trailSpawnRate)) return;
+  lastTrailSpawn = now;
+
+  const trail = new THREE.Mesh(
+    trailGeo,
+    new THREE.MeshBasicMaterial({
+      color: premiumTrailColor(),
+      transparent: true,
+      opacity: 0.5 + Math.min(combo / 120, 0.16)
+    })
+  );
+  trail.position.copy(playerModel.position);
+  trail.scale.setScalar(0.8 + Math.min(speedMultiplier * 0.12, 0.4));
+  trail.life = 1;
+  scene.add(trail);
+  trailParticles.push(trail);
+}</code></pre>
+
+<h2>6) Make the audio master cleaner</h2>
+<p>Inside <code>initAudio()</code>, replace the compressor/limiter settings with this tighter chain.</p>
+<pre><code>compressor.threshold.value = -20;
+compressor.knee.value = 10;
+compressor.ratio.value = 2.6;
+compressor.attack.value = 0.004;
+compressor.release.value = 0.11;
+
+limiter.threshold.value = -1.0;
+limiter.knee.value = 0;
+limiter.ratio.value = 20;
+limiter.attack.value = 0.001;
+limiter.release.value = 0.045;
+
+masterGain.gain.value = 0.72;
+delayFeedback.gain.value = 0.18;
+reverbGain.gain.value = 0.09;
+shimmerGain.gain.value = 0.04;</code></pre>
+
+<h3>Why this feels better</h3>
+<ul>
+  <li>Less washy tail buildup.</li>
+  <li>Kicks stay forward.</li>
+  <li>Synth layer stops smearing the action.</li>
+  <li>The whole mix feels more “game,” less “demo.”</li>
+</ul>
+
+<h2>7) Replace the player/camera section inside <code>animate()</code></h2>
+<p>Find the big block starting at <code>if (hasIntersection) {</code> and replace it with this version.</p>
+<pre><code>if (hasIntersection) {
+  const targetPlayerZ = nowPerf &lt; playerPushFrontUntil ? BALANCE.playerFrontPush : 0;
+  const follow = pwrAutoPilot ? 0.18 : BALANCE.playerFollow;
+
+  playerModel.position.x += (target.x - playerModel.position.x) * follow;
+  playerModel.position.y += (target.y - playerModel.position.y) * follow;
+  playerModel.position.z += (targetPlayerZ - playerModel.position.z) * 0.18;
+
+  const vx = target.x - playerModel.position.x;
+  const vy = target.y - playerModel.position.y;
+
+  playerModel.rotation.x += ((-vy * BALANCE.playerTiltX) - playerModel.rotation.x) * 0.12;
+  playerModel.rotation.y += ((vx * BALANCE.playerTiltY) - playerModel.rotation.y) * 0.14;
+  playerModel.rotation.z += ((-vx * BALANCE.playerTiltZ) - playerModel.rotation.z) * 0.14;
+
+  playerRing.rotation.z += 0.07 + speedMultiplier * 0.012;
+  playerAura.scale.setScalar(1 + speedMultiplier * 0.045 + comboGlow * 0.06 + (nowPerf &lt; playerPushFrontUntil ? 0.12 : 0));
+
+  const lookAheadX = target.x * BALANCE.cameraLookAhead;
+  const lookAheadY = target.y * (BALANCE.cameraLookAhead * 0.8);
+  currentCamX += ((lookAheadX) - currentCamX) * BALANCE.cameraFollow;
+  currentCamY += ((5.2 + lookAheadY) - currentCamY) * BALANCE.cameraFollow;
+
+  targetCameraBank = clamp(-vx * BALANCE.cameraRoll, -0.18, 0.18);
+  cameraBank += (targetCameraBank - cameraBank) * 0.08;
+
+  let sX = 0;
+  let sY = 0;
+  if (cameraShake &gt; 0.01) {
+    sX = (Math.random() - 0.5) * cameraShake;
+    sY = (Math.random() - 0.5) * cameraShake * 0.65;
+    cameraShake *= 0.84;
+  }
+
+  const targetCamZ = nowPerf &lt; boostFovUntil ? 10.8 : 12 + (1 - startupEase) * 0.9 - Math.min((speedMultiplier - 1) * 0.28, 0.6);
+  camera.position.x += ((currentCamX + sX) - camera.position.x) * 0.14;
+  camera.position.y += ((currentCamY + sY) - camera.position.y) * 0.14;
+  camera.position.z += (targetCamZ - camera.position.z) * 0.12;
+  camera.rotation.z += (cameraBank - camera.rotation.z) * 0.08;
+
+  chaseLight.position.set(playerModel.position.x * 0.42, playerModel.position.y * 0.5, playerModel.position.z + 3.2);
+  chaseLight.intensity = 1.12 + speedMultiplier * 0.18 + comboGlow * 0.2 + (isOverdrive ? 0.45 : 0);
+
+  camera.lookAt(
+    playerModel.position.x * 0.12,
+    playerModel.position.y * 0.09,
+    -20 + playerModel.position.z * 0.18
+  );
+
+  spawnTrail(nowPerf);
+}</code></pre>
+
+<h2>8) Add hit-stop so perfect hits feel expensive</h2>
+<p>Near the top of <code>animate()</code>, after your paused/gameActive checks, add:</p>
+<pre><code>if (performance.now() &lt; hitStopUntil) {
+  renderer.render(scene, camera);
+  return;
+}</code></pre>
+
+<p>Then inside your note-hit block, replace the timing reactions with this stronger one:</p>
+<pre><code>if (absZ &lt; 0.45) {
+  timingBonus = 34;
+  timingCombo = 2;
+  tText = 'PERFECT!';
+  tColor = '#ffd60a';
+  flashHit('rgba(255,214,10,1)', BALANCE.perfectFlashOpacity, 180);
+  perfectHits++;
+  addFocus(16);
+  addHitStop(BALANCE.hitStopPerfectMs);
+  addCameraPunch(1.0, 170);
+  comboGlow = Math.min(1.4, comboGlow + 0.28);
+  lastPerfectAt = performance.now();
+} else if (absZ &lt; 1.0) {
+  timingBonus = 22;
+  tText = 'GREAT';
+  tColor = '#00f5d4';
+  flashHit('rgba(0,245,212,1)', 0.1, 150);
+  addFocus(8);
+  addHitStop(BALANCE.hitStopGreatMs);
+  addCameraPunch(0.42, 120);
+  comboGlow = Math.min(1.1, comboGlow + 0.18);
+} else {
+  flashHit('rgba(247,37,133,1)', 0.06, 120);
+  addFocus(5);
+  addCameraPunch(0.16, 80);
+}</code></pre>
+
+<h2>9) Make misses feel fair, not cheap</h2>
+<p>Inside the note miss section, replace the punishment chunk with:</p>
+<pre><code>combo = Math.max(0, combo - 6);
+consecutiveMisses++;
+if (consecutiveMisses &gt;= 3) {
+  speedMultiplier = Math.max(1, speedMultiplier * 0.82);
+  consecutiveMisses = 0;
+}
+cameraShake = Math.max(cameraShake, 0.78);
+flashHit('rgba(247,37,133,1)', 0.09, 170);
+createHitText('MISS', '#f72585', playerModel.position.clone().add(new THREE.Vector3(0, 1.1, 0)));
+missRecoveryUntil = time + BALANCE.missRecoveryMs;
+onGameplayMiss();
+updateHud({ pulseSpeed: true });</code></pre>
+
+<p>This keeps the game punishing, but avoids the “premium run suddenly feels broken” problem.</p>
+
+<h2>10) Smooth the spawn rhythm</h2>
+<p>Replace your spawn interval block with this:</p>
+<pre><code>spawnClock += 16.666;
+const baseSpawnInterval = Math.max(
+  BALANCE.spawnFloorMs,
+  ((((BALANCE.spawnStartMs * (1.65 - startupEase * 0.65)) - BALANCE.spawnSpeedFactorMs) / Math.max(0.75, speedMultiplier)) - (Math.min(combo, 50) * (BALANCE.spawnComboFactorMs * 1.35))) * phaseNow.spawnBias
+);
+const rhythmicInterval = baseSpawnInterval + Math.sin(spawnClock * 0.0032) * BALANCE.spawnRhythmJitter;
+const spawnInterval = Math.max(BALANCE.spawnFloorMs, rhythmicInterval + BALANCE.spawnCooldownSafety);
+if (time - lastSpawnTime &gt; spawnInterval) {
+  spawnPatternPack();
+  lastSpawnTime = time;
+}</code></pre>
+
+<h2>11) Make combo energy feed back into the scene</h2>
+<p>Add this near the end of <code>animate()</code>, before <code>renderer.render(scene, camera)</code>.</p>
+<pre><code>comboGlow += ((combo * BALANCE.comboGlowBoost) - comboGlow) * 0.08;
+comboGlow = clamp(comboGlow, 0, 1.2);
+
+playerAura.material.opacity = 0.08 + comboGlow * 0.12 + speedMultiplier * 0.012;
+pulseLight.distance = 40 + comboGlow * 8;
+rimLight.intensity = 0.95 + phase * 0.14 + comboGlow * 0.22;
+ui.comboNum.style.textShadow = `0 0 ${16 + comboGlow * 20}px rgba(247,37,133,${0.45 + comboGlow * 0.2})`;
+ui.perfectRing.style.opacity = String(0.8 + comboGlow * 0.18);
+ui.perfectRing.style.transform = `translate(-50%, -50%) scale(${1 + comboGlow * 0.015})`;</code></pre>
+
+<h2>12) Make beat switching feel like a feature, not a debug button</h2>
+<p>At the end of <code>cycleMusicStyle()</code> and <code>cycleMusicStyleBackwards()</code>, add:</p>
+<pre><code>playPhaseTransitionSound();
+addCameraPunch(0.22, 100);
+kickHud(ui.btnStyle);</code></pre>
+
+<h2>13) Tiny cleanup fixes worth doing</h2>
+<pre><code>// Remove duplicate camera.lookAt in setup.
+// Current code has it twice.
+
+camera.lookAt(0, 0, -20);</code></pre>
+
+<pre><code>// In mute toggle, restore actual master target instead of hardcoded 0.5
+if (masterGain &amp;&amp; audioCtx) {
+  masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.72, audioCtx.currentTime, 0.02);
+}</code></pre>
+
+<h2>14) What this polish pass changes in feel</h2>
+<ul>
+  <li>The camera now feels heavy and intentional instead of floaty.</li>
+  <li>Perfect hits have weight because of hit-stop, FOV punch, and flash shaping.</li>
+  <li>Misses hurt without fully collapsing the run.</li>
+  <li>Combo visually charges the whole scene.</li>
+  <li>Spawns feel paced, not randomly spammy.</li>
+  <li>The mix is tighter and more game-ready.</li>
+</ul>
+
+<h2>15) Best next upgrade after this</h2>
+<p>If you keep pushing this, the next real premium step is a <strong>post-processing pass</strong> with bloom, subtle chromatic aberration, and a velocity-based vignette tied to combo and speed. That would lift the whole game from “good browser prototype” into “stylized arcade product.”</p>
+</body>
+</html>
